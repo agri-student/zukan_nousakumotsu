@@ -1,12 +1,8 @@
 import { SAMPLE_CROPS } from "@/lib/cropData";
-import { Crop } from "@/types/crop";
 import CropListClient from "@/components/crops/CropListClient";
 import { BookOpen, Sprout, Leaf } from "lucide-react";
 
 export default function HomePage() {
-  // Embed all crop data at build time — no server needed
-  const crops: Crop[] = SAMPLE_CROPS.map((c, i) => ({ ...c, id: `local-${i}` }));
-
   return (
     <>
       {/* Hero Section */}
@@ -31,7 +27,7 @@ export default function HomePage() {
             <div className="mt-8 flex gap-6">
               <Stat
                 icon={<BookOpen size={18} />}
-                value={`${crops.length}種`}
+                value={`${SAMPLE_CROPS.length}種+`}
                 label="収録作物"
               />
               <Stat
@@ -59,8 +55,8 @@ export default function HomePage() {
         />
       </section>
 
-      {/* Interactive list — client component handles filtering & search */}
-      <CropListClient allCrops={crops} />
+      {/* Interactive list — fetches from Firestore if configured, local data otherwise */}
+      <CropListClient />
     </>
   );
 }

@@ -1,33 +1,20 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { Crop, Category, Season } from "@/types/crop";
+import { useSearchParams } from "next/navigation";
+import { Category, Season } from "@/types/crop";
+import { useCrops } from "@/hooks/useCrops";
 import CropGrid from "./CropGrid";
 import FilterBar from "./FilterBar";
+import { Sprout } from "lucide-react";
 
-function CropListInner({ allCrops }: { allCrops: Crop[] }) {
+function CropListInner() {
   const searchParams = useSearchParams();
-  const season = searchParams.get("season") as Season | null;
-  const category = searchParams.get("category") as Category | null;
-  const search = searchParams.get("search")?.trim().toLowerCase() ?? "";
+  const season = (searchParams.get("season") as Season) || undefined;
+  const category = (searchParams.get("category") as Category) || undefined;
+  const search = searchParams.get("search") ?? "";
 
-  let filtered = allCrops;
-
-  if (season) {
-    filtered = filtered.filter((c) => c.seasons.includes(season));
-  }
-  if (category) {
-    filtered = filtered.filter((c) => c.category === category);
-  }
-  if (search) {
-    filtered = filtered.filter(
-      (c) =>
-        c.nameJa.includes(search) ||
-        c.nameEn.toLowerCase().includes(search) ||
-        c.scientificName.toLowerCase().includes(search)
-    );
-  }
+  const { crops, loading } = useCrops({ season, category, search });
 
   const heading = search
     ? `「${search}」の検索結果`
@@ -48,22 +35,34 @@ function CropListInner({ allCrops }: { allCrops: Crop[] }) {
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-lg font-bold text-[--soil]">
               {heading}
-              <span className="ml-2 text-sm font-normal text-[--earth]">
-                {filtered.length}件
-              </span>
+              {!loading && (
+                <span className="ml-2 text-sm font-normal text-[--earth]">
+                  {crops.length}件
+                </span>
+              )}
             </h2>
           </div>
-          <CropGrid crops={filtered} />
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-3">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[--sage-pale]">
+                <Sprout size={28} className="text-[--sage] animate-pulse" />
+              </div>
+              <p className="text-sm text-[--earth]">データを読み込み中...</p>
+            </div>
+          ) : (
+            <CropGrid crops={crops} />
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-export default function CropListClient({ allCrops }: { allCrops: Crop[] }) {
+export default function CropListClient() {
   return (
     <Suspense>
-      <CropListInner allCrops={allCrops} />
+      <CropListInner />
     </Suspense>
   );
 }
