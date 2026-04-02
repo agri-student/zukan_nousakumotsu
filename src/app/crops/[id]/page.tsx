@@ -9,13 +9,19 @@ import {
   Clock,
   Lightbulb,
 } from "lucide-react";
-import { getCropById, getCrops } from "@/lib/cropsRepository";
-import { CATEGORY_LABELS } from "@/types/crop";
+import { SAMPLE_CROPS } from "@/lib/cropData";
+import { Crop, CATEGORY_LABELS } from "@/types/crop";
 import CropImage from "@/components/crops/CropImage";
 import SeasonTag from "@/components/crops/SeasonTag";
 import DifficultyBadge from "@/components/crops/DifficultyBadge";
 import CultivationCalendar from "@/components/crops/CultivationCalendar";
 import FavoriteButton from "@/components/crops/FavoriteButton";
+
+// All crops embedded at build time
+const ALL_CROPS: Crop[] = SAMPLE_CROPS.map((c, i) => ({
+  ...c,
+  id: `local-${i}`,
+}));
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -23,7 +29,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const crop = await getCropById(id);
+  const crop = ALL_CROPS.find((c) => c.id === id);
   if (!crop) return {};
   return {
     title: `${crop.nameJa}（${crop.nameEn}）`,
@@ -31,14 +37,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export async function generateStaticParams() {
-  const crops = await getCrops();
-  return crops.map((c) => ({ id: c.id }));
+export function generateStaticParams() {
+  return ALL_CROPS.map((c) => ({ id: c.id }));
 }
 
 export default async function CropDetailPage({ params }: Props) {
   const { id } = await params;
-  const crop = await getCropById(id);
+  const crop = ALL_CROPS.find((c) => c.id === id);
   if (!crop) notFound();
 
   return (
@@ -147,7 +152,7 @@ export default async function CropDetailPage({ params }: Props) {
 
       {/* Tips */}
       <section className="card-paper p-6">
-        <h2 className="section-title flex items-center gap-2">
+        <h2 className="section-title">
           <Lightbulb size={18} className="text-[--harvest]" />
           育て方のコツ
         </h2>

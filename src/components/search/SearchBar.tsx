@@ -1,15 +1,31 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, Sprout } from "lucide-react";
 import { Crop } from "@/types/crop";
+import { SAMPLE_CROPS } from "@/lib/cropData";
 import Link from "next/link";
+
+// Build-time data embedded — no API needed
+const ALL_CROPS: Crop[] = SAMPLE_CROPS.map((c, i) => ({
+  ...c,
+  id: `local-${i}`,
+}));
+
+function searchLocal(term: string): Crop[] {
+  const lower = term.toLowerCase();
+  return ALL_CROPS.filter(
+    (c) =>
+      c.nameJa.includes(term) ||
+      c.nameEn.toLowerCase().includes(lower) ||
+      c.scientificName.toLowerCase().includes(lower)
+  ).slice(0, 8);
+}
 
 export default function SearchBar() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Crop[]>([]);
-  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -28,31 +44,17 @@ export default function SearchBar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (!query.trim()) {
+  const handleChange = useCallback((value: string) => {
+    setQuery(value);
+    if (!value.trim()) {
       setResults([]);
       setOpen(false);
       return;
     }
-
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(
-          `/api/crops/search?q=${encodeURIComponent(query.trim())}`
-        );
-        const data = await res.json();
-        setResults(data.crops || []);
-        setOpen(true);
-      } catch {
-        setResults([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 250);
-
-    return () => clearTimeout(timer);
-  }, [query]);
+    const found = searchLocal(value.trim());
+    setResults(found);
+    setOpen(true);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +66,8 @@ export default function SearchBar() {
 
   const highlight = (text: string) => {
     if (!query) return text;
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`(${escaped})`, "gi");
     const parts = text.split(regex);
     return parts.map((part, i) =>
       regex.test(part) ? <mark key={i}>{part}</mark> : part
@@ -80,7 +83,7 @@ export default function SearchBar() {
             ref={inputRef}
             type="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
             placeholder="和名・英名で検索..."
             className="flex-1 bg-transparent text-sm text-[--soil] placeholder:text-gray-400 outline-none min-w-0"
             aria-label="農作物を検索"
@@ -105,11 +108,7 @@ export default function SearchBar() {
       {/* Dropdown results */}
       {open && (
         <div className="absolute left-0 right-0 top-full mt-1 z-50 card-paper overflow-hidden max-h-72 overflow-y-auto">
-          {loading ? (
-            <div className="flex items-center justify-center py-6">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-[--sage] border-t-transparent" />
-            </div>
-          ) : results.length === 0 ? (
+          {results.length === 0 ? (
             <div className="flex flex-col items-center py-6 text-sm text-[--earth]">
               <Sprout size={24} className="mb-2 text-[--sage] opacity-50" />
               <p>「{query}」は見つかりませんでした</p>

@@ -5,8 +5,14 @@ import Link from "next/link";
 import { Heart, BookOpen, ArrowLeft } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Crop } from "@/types/crop";
-import CropCard from "@/components/crops/CropCard";
 import { SAMPLE_CROPS } from "@/lib/cropData";
+import CropCard from "@/components/crops/CropCard";
+
+// All crops embedded at build time
+const ALL_CROPS: Crop[] = SAMPLE_CROPS.map((c, i) => ({
+  ...c,
+  id: `local-${i}`,
+}));
 
 export default function FavoritesPage() {
   const { favorites, hydrated } = useFavorites();
@@ -14,38 +20,8 @@ export default function FavoritesPage() {
 
   useEffect(() => {
     if (!hydrated) return;
-
-    async function loadFavorites() {
-      const ids = [...favorites];
-      if (ids.length === 0) {
-        setFavoriteCrops([]);
-        return;
-      }
-
-      // Try API first, fall back to local data
-      try {
-        const responses = await Promise.all(
-          ids.map(async (id) => {
-            const res = await fetch(`/api/crops/${id}`);
-            if (!res.ok) return null;
-            return res.json() as Promise<Crop | null>;
-          })
-        );
-        setFavoriteCrops(responses.filter((c): c is Crop => c !== null));
-      } catch {
-        // Fallback to local data
-        const localCrops = ids
-          .map((id) => {
-            const idx = parseInt(id.replace("local-", ""));
-            const crop = SAMPLE_CROPS[idx];
-            return crop ? { ...crop, id } : null;
-          })
-          .filter((c): c is Crop => c !== null);
-        setFavoriteCrops(localCrops);
-      }
-    }
-
-    loadFavorites();
+    const ids = new Set(favorites);
+    setFavoriteCrops(ALL_CROPS.filter((c) => ids.has(c.id)));
   }, [favorites, hydrated]);
 
   return (
@@ -66,9 +42,7 @@ export default function FavoritesPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-[--soil]">マイ図鑑</h1>
-            <p className="text-sm text-[--earth]">
-              お気に入りに登録した農作物
-            </p>
+            <p className="text-sm text-[--earth]">お気に入りに登録した農作物</p>
           </div>
         </div>
       </div>
