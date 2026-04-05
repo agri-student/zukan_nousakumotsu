@@ -44,3 +44,29 @@ export async function deleteCrop(id: string): Promise<void> {
 
   await deleteDoc(doc(db, COLLECTION, id));
 }
+
+/** サンプルデータ（ローカル）の作物を非表示にする。IDはFirestoreに保存。 */
+export async function hideLocalCrop(localId: string): Promise<void> {
+  const { doc, setDoc, arrayUnion } = await import("firebase/firestore");
+  const { getDb } = await import("./firebase");
+  const db = getDb();
+
+  await setDoc(
+    doc(db, "settings", "app"),
+    { hiddenLocalCropIds: arrayUnion(localId) },
+    { merge: true }
+  );
+}
+
+/** Firestoreに保存された非表示サンプル作物IDのリストを取得する。 */
+export async function getHiddenLocalCropIds(): Promise<string[]> {
+  const { doc, getDoc } = await import("firebase/firestore");
+  const { getDb } = await import("./firebase");
+  const db = getDb();
+
+  const snap = await getDoc(doc(db, "settings", "app"));
+  if (snap.exists()) {
+    return (snap.data().hiddenLocalCropIds as string[]) ?? [];
+  }
+  return [];
+}

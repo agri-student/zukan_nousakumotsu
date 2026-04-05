@@ -36,11 +36,18 @@ export function useCrops(filters: Filters = {}) {
 
       if (isFirebaseConfigured()) {
         try {
-          const { collection, getDocs, query, orderBy, where } = await import(
-            "firebase/firestore"
-          );
+          const { collection, getDocs, query, orderBy, where, doc, getDoc } =
+            await import("firebase/firestore");
           const { getDb } = await import("@/lib/firebase");
           const db = getDb();
+
+          // 非表示ローカル作物IDを取得してフィルタリング
+          const settingsSnap = await getDoc(doc(db, "settings", "app"));
+          const hiddenIds: string[] =
+            settingsSnap.exists()
+              ? (settingsSnap.data().hiddenLocalCropIds as string[]) ?? []
+              : [];
+          data = LOCAL_CROPS.filter((c) => !hiddenIds.includes(c.id));
 
           const constraints = [orderBy("nameJa")];
           if (filters.category) {

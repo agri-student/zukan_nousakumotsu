@@ -2,13 +2,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Crop, CATEGORY_LABELS } from "@/types/crop";
-import { addCrop, updateCrop, deleteCrop } from "@/lib/cropsAdmin";
+import { addCrop, updateCrop, deleteCrop, hideLocalCrop, getHiddenLocalCropIds } from "@/lib/cropsAdmin";
+import { SAMPLE_CROPS } from "@/lib/cropData";
 import CropForm from "./CropForm";
 import DifficultyBadge from "@/components/crops/DifficultyBadge";
 import SeasonTag from "@/components/crops/SeasonTag";
 import { Plus, Pencil, Trash2, Sprout, AlertTriangle, ChevronLeft, RefreshCw } from "lucide-react";
 
 type View = "list" | "new" | { type: "edit"; crop: Crop };
+
+const LOCAL_CROPS: Crop[] = SAMPLE_CROPS.map((c, i) => ({ ...c, id: `local-${i}` }));
 
 export default function CropManager() {
   const [crops, setCrops] = useState<Crop[]>([]);
@@ -23,10 +26,20 @@ export default function CropManager() {
       const { collection, getDocs, orderBy, query } = await import("firebase/firestore");
       const { getDb } = await import("@/lib/firebase");
       const db = getDb();
-      const snap = await getDocs(query(collection(db, "crops"), orderBy("nameJa")));
-      setCrops(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Crop)));
+
+      const [snap, hiddenIds] = await Promise.all([
+        getDocs(query(collection(db, "crops"), orderBy("nameJa"))),
+        getHiddenLocalCropIds(),
+      ]);
+
+      const firestoreCrops = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Crop));
+      const visibleLocal = LOCAL_CROPS.filter((c) => !hiddenIds.includes(c.id));
+
+      // Firestoreの作物を先に、続いてサンプルデータを表示
+      setCrops([...firestoreCrops, ...visibleLocal]);
     } catch (err) {
       console.error("Failed to fetch crops:", err);
+      setCrops(LOCAL_CROPS);
     } finally {
       setLoading(false);
     }
@@ -48,7 +61,11 @@ export default function CropManager() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await deleteCrop(deleteTarget.id);
+      if (deleteTarget.id.startsWith("local-")) {
+        await hideLocalCrop(deleteTarget.id);
+      } else {
+        await deleteCrop(deleteTarget.id);
+      }
       setCrops((prev) => prev.filter((c) => c.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch (err) {
@@ -140,8 +157,17 @@ export default function CropManager() {
               {crops.map((crop) => (
                 <tr key={crop.id} className="hover:bg-[--sage-pale]/30 transition-colors">
                   <td className="px-4 py-3">
-                    <p className="font-semibold text-[--soil]">{crop.nameJa}</p>
-                    <p className="text-xs text-[--earth]">{crop.nameEn}</p>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <p className="font-semibold text-[--soil]">{crop.nameJa}</p>
+                        <p className="text-xs text-[--earth]">{crop.nameEn}</p>
+                      </div>
+                      {crop.id.startsWith("local-") && (
+                        <span className="shrink-0 rounded-full bg-[--parchment] border border-[--border] px-1.5 py-0.5 text-[10px] font-medium text-[--earth]">
+                          サンプル
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
                     <span className="tag bg-[--sage] text-white text-xs">
