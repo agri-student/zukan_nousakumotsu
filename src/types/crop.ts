@@ -16,6 +16,24 @@ export interface CalendarMonth {
   harvesting?: boolean;
 }
 
+export interface PestInfo {
+  name: string;
+  type: "disease" | "pest";
+  symptoms: string;
+  treatment: string;
+}
+
+export interface VarietyInfo {
+  name: string;
+  characteristics: string;
+}
+
+export interface FertilizerInfo {
+  baseFertilizer: string;
+  topDressing: string;
+  npkNote: string;
+}
+
 export interface Crop {
   id: string;
   nameJa: string;
@@ -32,6 +50,11 @@ export interface Crop {
   sunlight: string;
   harvestPeriodDays: number;
   calendar: CalendarMonth[];
+  // 新規フィールド
+  varieties: VarietyInfo[];
+  pests: PestInfo[];
+  fertilizer?: FertilizerInfo;
+  harvestIndicator?: string;
   imageUrl?: string;
   thumbnailUrl?: string;
   createdAt?: Date;
@@ -59,4 +82,20 @@ export const SEASON_COLORS: Record<Season, string> = {
   summer: "bg-green-100 text-green-700",
   autumn: "bg-orange-100 text-orange-700",
   winter: "bg-blue-100 text-blue-700",
+};
+
+export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  1: "初心者向け",
+  2: "標準的",
+  3: "中級",
+  4: "上級",
+  5: "専門的",
+};
+
+export const DIFFICULTY_DESC: Record<Difficulty, string> = {
+  1: "管理が少なく安定生産しやすい",
+  2: "基本的な栽培管理で安定生産できる",
+  3: "病害虫・施肥管理の知識が必要",
+  4: "精密な環境制御と高い技術が必要",
+  5: "高度な専門技術と経験が必要",
 };
